@@ -86,10 +86,16 @@ export default function reducer(state = INITIAL_STATE, action) {
       return state;
   }
 }
+const NAME = "rickandmorty";
 
 // aux
 export const saveToLocal = (chars) => {
-  localStorage.setItem("rickandmorty", JSON.stringify(chars));
+  if (!localStorage.getItem(NAME)) {
+    localStorage.setItem(NAME, JSON.stringify(chars));
+  } else {
+    localStorage.removeItem(NAME);
+    localStorage.setItem(NAME, JSON.stringify(chars));
+  }
 };
 
 // Actions
@@ -100,12 +106,12 @@ export const getCharsAction = () => async (dispatch, getState) => {
   });
 
   try {
-    let localData = localStorage.getItem("rickandmorty");
+    let localData = JSON.parse(localStorage.getItem(NAME));
 
     if (localData) {
       dispatch({
         type: GET_CHARS_SUCCESS,
-        payload: JSON.parse(localData),
+        payload: localData,
       });
     } else {
       const { data } = await axiosBase({ method: "GET" });
@@ -124,22 +130,28 @@ export const getCharsAction = () => async (dispatch, getState) => {
 };
 
 export const getOneCharAction = (charId) => async (dispatch, getState) => {
-  console.log("getOneCharAction");
+  
   dispatch({
     type: GET_ONE_CHAR,
   });
   try {
-    console.log(getState(), "ducks - one - getState");
     const { data } = await axiosBase({ method: "GET", url: `/${charId}` });
-    console.log(Object.keys(data).length > 0);
-    console.log(data, "ducks - one - data");
-    console.log(getState(), "ducks - one - getState");
+    if (Object.keys(data).length === 0) {
+      const fromLocal = getState().chars.chars;
+      let charLocal = fromLocal.filter((item) => item.id === charId);
+      dispatch({
+        type: GET_ONE_CHAR_SUCCESS,
+        payload: charLocal[0],
+      });
+      return
+    }
     dispatch({
       type: GET_ONE_CHAR_SUCCESS,
       payload: data,
     });
+
   } catch (error) {
-    console.log("GetOne - error");
+    
     dispatch({
       type: GET_CHARS_ERROR,
       payload: error,
@@ -148,26 +160,29 @@ export const getOneCharAction = (charId) => async (dispatch, getState) => {
 };
 
 export const updateCharAction =
-  ({ charId, character }) =>
+  ( charId, character ) =>
   async (dispatch, getState) => {
     dispatch({
       type: UPDATE_CHAR,
     });
     try {
+      
       const { chars } = getState().chars;
-      chars.map((item) => {
-        if (item.id === charId) {
+      
+      let newArr = chars.map((item) => {
+        if (item.id === Number(charId)) {
+          
           return character;
         } else {
           return item;
         }
       });
-      console.log(chars);
+      
       dispatch({
         type: UPDATE_CHAR_SUCCESS,
-        payload: chars,
+        payload: newArr,
       });
-      saveToLocal(chars);
+      saveToLocal(newArr)
     } catch (error) {
       dispatch({
         type: GET_CHARS_ERROR,
@@ -187,8 +202,7 @@ export const createNewCharAction = (newChar) => async (dispatch, getState) => {
     const { chars } = getState().chars;
     let addNew = { ...newChar, id: newId };
     const newArr = [...chars, { ...addNew }];
-    console.log(addNew, "create");
-    console.log(newArr, "create - arr");
+    
     dispatch({
       type: CREATE_NEW_CHAR_SUCCESS,
       payload: newArr,
@@ -206,13 +220,11 @@ export const removeCharAction = (charId) => async (dispatch, getState) => {
   dispatch({
     type: DELETE_CHAR,
   });
-
+  
   try {
     const { chars } = getState().chars;
-    console.log(chars, "remove-bef");
-    const newArr = chars.filter((item) => item.id !== charId);
-    console.log(chars, "remove-aft");
-
+    let newArr = chars.filter(item => item.id !== Number(charId))
+    
     dispatch({
       type: DELETE_CHAR_SUCCESS,
       payload: newArr,

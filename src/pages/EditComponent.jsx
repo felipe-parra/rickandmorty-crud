@@ -51,13 +51,14 @@ const EditComponent = () => {
     e.preventDefault();
     if (type === "edit") {
       console.log("handleSubmit - ", type);
+      console.log("handleSubmit - ", state);
       dispatch(updateCharAction(charId, state));
     } else {
       console.log("handleSubmit - ", type);
-      console.log(state)
+      console.log(state);
       dispatch(createNewCharAction(state));
     }
-    history.push("/");
+    !loading && history.push("/");
   };
 
   return (
